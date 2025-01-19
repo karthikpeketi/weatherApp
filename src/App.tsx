@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Search, Cloud, Thermometer, Wind, Droplets } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Cloud, Thermometer, Wind, Droplets } from "lucide-react";
 import { format } from "date-fns";
 import { searchLocations, getWeather } from "./api";
 import { Location, WeatherData, weatherBackgrounds } from "./types";
@@ -11,6 +11,7 @@ function App() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string>("");
 	const [showSuggestions, setShowSuggestions] = useState(false);
+	const [isLocationSelected, setIsLocationSelected] = useState<boolean>(false);
 	const searchRef = useRef<HTMLDivElement>(null);
 	const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,7 +57,7 @@ function App() {
 
 	useEffect(() => {
 		const fetchLocations = async () => {
-			if (query.length >= 2) {
+			if (query.length >= 2 && !isLocationSelected) {
 				try {
 					const results = await searchLocations(query);
 					setLocations(results);
@@ -74,22 +75,9 @@ function App() {
 		return () => clearTimeout(timeoutId);
 	}, [query]);
 
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			if (
-				searchRef.current &&
-				!searchRef.current.contains(event.target as Node)
-			) {
-				setShowSuggestions(false);
-			}
-		};
-
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, []);
-
 	const handleLocationSelect = async (location: Location) => {
 		setQuery(location.display_name);
+		setIsLocationSelected(true);
 		setShowSuggestions(false);
 		await getWeatherAtLocation(location.lat, location.lon);
 	};
@@ -100,9 +88,15 @@ function App() {
 		return weatherBackgrounds[condition] || weatherBackgrounds.default;
 	};
 
-	console.log(locations);
-	console.log(showSuggestions);
 
+	const handleOnClearLocation = () => {
+		if(query != "") {
+			setQuery("");
+			setIsLocationSelected(false);
+			setShowSuggestions(false);
+			searchInputRef.current?.focus();
+		}
+	}
 	return (
 		<div
 			className="min-h-screen w-full bg-cover bg-center bg-no-repeat transition-all duration-1000"
@@ -123,14 +117,19 @@ function App() {
 							placeholder="Search Location..."
 							className="w-full md:w-[300px] bg-white/20 backdrop-blur-md text-white placeholder-white/70 px-4 py-2 rounded-lg pr-10 focus:outline-none focus:ring-2 focus:ring-white/50"
 							value={query}
-							onChange={(e) => setQuery(e.target.value)}
+							onChange={(e) => {
+								setIsLocationSelected(false);
+								setQuery(e.target.value);
+							}}
 							onFocus={() => query.length >= 2 && setShowSuggestions(true)}
 						/>
-						<Search className="absolute right-3 top-2.5 text-white/70 h-5 w-5" />
+						<button onClick={handleOnClearLocation}>
+						   <X className="absolute right-3 top-2.5 text-white/70 h-5 w-5" />
+						</button>
 
 						{/* Location Suggestions */}
 						{showSuggestions && locations.length > 0 && (
-							<div className="bg-red absolute mt-2 w-full bg-white/90 backdrop-blur-md rounded-lg shadow-lg overflow-hidden">
+							<div className="bg-red absolute mt-2 w-full bg-white/90 backdrop-blur-md rounded-lg shadow-lg overflow-auto max-h-96">
 								{locations.map((location, index) => (
 									<div
 										key={`${location.lat}-${location.lon}-${index}`}
