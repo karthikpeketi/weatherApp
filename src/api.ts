@@ -3,7 +3,6 @@ import { Location, WeatherData } from './types';
 
 // Replace this with your actual OpenWeatherMap API key
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
-// const LOCATION_API_KEY = import.meta.env.VITE_LOCATION_API_KEY;
 const BASE_URL = 'https://api.openweathermap.org';
 
 export const searchLocations = async (query: string): Promise<Location[]> => {
