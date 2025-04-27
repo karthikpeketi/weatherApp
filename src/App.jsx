@@ -2,20 +2,42 @@ import { useState, useEffect, useRef } from "react";
 import { X, Cloud, Thermometer, Wind, Droplets } from "lucide-react";
 import { format } from "date-fns";
 import { searchLocations, getWeather } from "./api";
-import { Location, WeatherData, weatherBackgrounds } from "./types";
 
 function App() {
 	const [query, setQuery] = useState("");
-	const [locations, setLocations] = useState<Location[]>([]);
-	const [weather, setWeather] = useState<WeatherData | null>(null);
+	const [locations, setLocations] = useState([]);
+	const [weather, setWeather] = useState(null);
 	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState<string>("");
+	const [error, setError] = useState("");
 	const [showSuggestions, setShowSuggestions] = useState(false);
-	const [isLocationSelected, setIsLocationSelected] = useState<boolean>(false);
-	const searchRef = useRef<HTMLDivElement>(null);
-	const searchInputRef = useRef<HTMLInputElement>(null);
+	const [isLocationSelected, setIsLocationSelected] = useState(false);
+	const searchRef = useRef(null);
+	const searchInputRef = useRef(null);
 
-	const getWeatherAtLocation = async (latitude: number, longitude: number) => {
+	// Weather condition backgrounds mapping
+	const weatherBackgrounds = {
+		// Clear
+		Clear:
+			"https://images.unsplash.com/photo-1601297183305-6df142704ea2?auto=format&fit=crop&q=80",
+		// Clouds
+		Clouds:
+			"https://images.unsplash.com/photo-1534088568595-a066f410bcda?auto=format&fit=crop&q=80",
+		// Rain
+		Rain: "https://images.unsplash.com/photo-1519692933481-e162a57d6721?auto=format&fit=crop&q=80",
+		// Thunderstorm
+		Thunderstorm:
+			"https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?auto=format&fit=crop&q=80",
+		// Snow
+		Snow: "https://images.unsplash.com/photo-1478265409131-1f65c88f965c?auto=format&fit=crop&q=80",
+		// Mist/Fog
+		Mist: "https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227?auto=format&fit=crop&q=80",
+		Fog: "https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227?auto=format&fit=crop&q=80",
+		// Default
+		default:
+			"https://images.unsplash.com/photo-1601297183305-6df142704ea2?auto=format&fit=crop&q=80",
+	};
+
+	const getWeatherAtLocation = async (latitude, longitude) => {
 		try {
 			setLoading(true);
 			setError("");
@@ -75,7 +97,7 @@ function App() {
 		return () => clearTimeout(timeoutId);
 	}, [query]);
 
-	const handleLocationSelect = async (location: Location) => {
+	const handleLocationSelect = async (location) => {
 		setQuery(location.display_name);
 		setIsLocationSelected(true);
 		setShowSuggestions(false);
@@ -88,15 +110,14 @@ function App() {
 		return weatherBackgrounds[condition] || weatherBackgrounds.default;
 	};
 
-
 	const handleOnClearLocation = () => {
-		if(query != "") {
+		if (query != "") {
 			setQuery("");
 			setIsLocationSelected(false);
 			setShowSuggestions(false);
 			searchInputRef.current?.focus();
 		}
-	}
+	};
 	return (
 		<div
 			className="min-h-screen w-full bg-cover bg-center bg-no-repeat transition-all duration-1000"
@@ -107,9 +128,10 @@ function App() {
 			<div className="min-h-screen bg-black/30 backdrop-blur-sm px-[15px] md:px-[25px] xl:px-[40px]">
 				{/* Header with Logo and Search */}
 				<div className="min-h-[15vh] flex items-center justify-between mb-12">
-					<div className="text-white font-bold text-2xl">
+					<div className="text-white font-bold text-2xl select-none">
 						Weather<span className="text-yellow-400">⚡</span>
 					</div>
+					{/* Location search */}
 					<div className="relative z-50" ref={searchRef}>
 						<input
 							ref={searchInputRef}
@@ -124,7 +146,7 @@ function App() {
 							onFocus={() => query.length >= 2 && setShowSuggestions(true)}
 						/>
 						<button onClick={handleOnClearLocation}>
-						   <X className="absolute right-3 top-2.5 text-white/70 h-5 w-5" />
+							<X className="absolute right-3 top-2.5 text-white/70 h-5 w-5" />
 						</button>
 
 						{/* Location Suggestions */}
@@ -153,10 +175,10 @@ function App() {
 				)}
 
 				{loading ? (
-					<div className="text-white text-center">Loading...</div>
+					<div className="text-white text-center select-none">Loading...</div>
 				) : weather ? (
 					// Main Weather Display
-					<div className="min-h-[78vh] md:flex md:flex-row md:justify-between md:items-center">
+					<div className="min-h-[78vh] md:flex md:flex-row md:justify-between md:items-center select-none cursor-text">
 						<div className="text-white mb-12">
 							<div className="text-8xl font-light mb-4">
 								{Math.round(weather.main.temp)}°
@@ -223,7 +245,7 @@ function App() {
 						</div>
 					</div>
 				) : (
-					<div className="text-white text-center">
+					<div className="text-white text-center select-none">
 						No weather data available
 					</div>
 				)}
