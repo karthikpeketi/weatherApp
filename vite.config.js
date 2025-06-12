@@ -5,6 +5,15 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   base: "/weatherApp/",
   plugins: [react()],
+  server: {
+    port: 5173,
+    open: true,
+    host: true
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },

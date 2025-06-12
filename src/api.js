@@ -51,3 +51,75 @@ export const getWeather = async (lat, lon) => {
     return null;
   }
 };
+
+// Get 5-day weather forecast
+export const getForecast = async (lat, lon) => {
+  if (!API_KEY) {
+    console.error('OpenWeatherMap API key is not configured');
+    return null;
+  }
+
+  try {
+    const response = await axios.get(
+      `${BASE_URL}/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching forecast:', error.message);
+    return null;
+  }
+};
+
+// Get air quality data
+export const getAirQuality = async (lat, lon) => {
+  if (!API_KEY) {
+    console.error('OpenWeatherMap API key is not configured');
+    return null;
+  }
+
+  try {
+    const response = await axios.get(
+      `${BASE_URL}/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching air quality:', error.message);
+    return null;
+  }
+};
+
+// Get UV Index
+export const getUVIndex = async (lat, lon) => {
+  if (!API_KEY) {
+    console.error('OpenWeatherMap API key is not configured');
+    return null;
+  }
+
+  try {
+    const response = await axios.get(
+      `${BASE_URL}/data/2.5/uvi?lat=${lat}&lon=${lon}&appid=${API_KEY}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching UV index:', error.message);
+    return null;
+  }
+};
+
+// Get weather alerts
+export const getWeatherAlerts = async (lat, lon) => {
+  if (!API_KEY) {
+    console.error('OpenWeatherMap API key is not configured');
+    return null;
+  }
+
+  try {
+    const response = await axios.get(
+      `${BASE_URL}/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=minutely&appid=${API_KEY}&units=metric`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching weather alerts:', error.message);
+    return null;
+  }
+};
