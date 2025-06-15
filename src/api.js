@@ -25,16 +25,14 @@ export const searchLocations = async (query) => {
   if (!query.trim()) return [];
   
   try {
-    const response = await fetch(
+    const response = await axios.get(
       `https://nominatim.openstreetmap.org/search?format=json&q=${query}`
     );
-    const data = await response.json();
-    return data; // Return the API response data
+    return response.data; // Return the API response data
   } catch (error) {
-    console.error('An unexpected error occurred while fetching locations');
+    console.error('Error searching locations:', error.message);
     return []; // Return an empty array in case of an error
   }
-  
 };
 
 export const getWeather = async (lat, lon) => {

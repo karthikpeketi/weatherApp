@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Heart, X, MapPin } from 'lucide-react';
 import { getFromLocalStorage, saveToLocalStorage } from '../utils/weatherUtils';
+import ReusablePopup from './ReusablePopup';
 
 const FavoriteLocations = ({ currentLocation, onLocationSelect, getModalPosition, showListOnHover = false }) => {
   const [favorites, setFavorites] = useState([]);
@@ -107,66 +108,54 @@ const FavoriteLocations = ({ currentLocation, onLocationSelect, getModalPosition
       </button>
 
       {/* Favorites Modal */}
-      {showFavorites && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
-          onClick={() => setShowFavorites(false)}
-        >
-          <div
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-4 border-b border-white/20">
-              <h3 className="text-gray-800 font-semibold">Favorite Locations</h3>
-              <button
-                onClick={() => setShowFavorites(false)}
-                className="p-1 rounded-full text-gray-500 hover:text-red-500 transition-colors"
-                title="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {favorites.length === 0 ? (
-              <div className="p-4 text-gray-600 text-center">
-                No favorite locations yet
-              </div>
-            ) : (
-              <div className="max-h-64 overflow-y-auto">
-                {favorites.map((favorite) => (
-                  <div
-                    key={favorite.id}
-                    className="flex items-center justify-between p-3 hover:bg-white/50 border-b border-white/10 last:border-0"
-                  >
-                    <button
-                      onClick={() => {
-                        onLocationSelect(favorite.lat, favorite.lon);
-                        setShowFavorites(false);
-                      }}
-                      className="flex-1 text-left"
-                    >
-                      <div className="text-gray-800 font-medium">
-                        {favorite.name}
-                      </div>
-                      <div className="text-gray-600 text-sm">
-                        {favorite.country}
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => removeFromFavorites(favorite.id)}
-                      className="p-1 text-gray-500 hover:text-red-500 transition-colors"
-                      title="Remove from favorites"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+      <ReusablePopup
+        isOpen={showFavorites}
+        onClose={() => setShowFavorites(false)}
+        title="Favorite Locations"
+        titleIcon={<MapPin className="h-6 w-6" />}
+        maxWidth="max-w-md"
+        maxHeight="80vh"
+      >
+        {favorites.length === 0 ? (
+          <div className="text-center py-8 opacity-70">
+            <MapPin className="h-16 w-16 mx-auto mb-4 opacity-50" />
+            <p>No favorite locations yet</p>
+            <p className="text-sm mt-2">Add locations to your favorites to access them quickly</p>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="space-y-2">
+            {favorites.map((favorite) => (
+              <div
+                key={favorite.id}
+                className="flex items-center justify-between p-3 bg-white/5 backdrop-blur-md rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <button
+                  onClick={() => {
+                    onLocationSelect(favorite.lat, favorite.lon);
+                    setShowFavorites(false);
+                  }}
+                  className="flex-1 text-left"
+                >
+                  <div className="text-white font-medium">
+                    {favorite.name}
+                  </div>
+                  <div className="text-white/70 text-sm">
+                    {favorite.country}
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => removeFromFavorites(favorite.id)}
+                  className="p-1 text-red-400 hover:text-red-300 transition-colors ml-2"
+                  title="Remove from favorites"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </ReusablePopup>
     </div>
   );
 };

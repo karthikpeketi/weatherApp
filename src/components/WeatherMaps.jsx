@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Map, Layers, X } from 'lucide-react';
+import { Map, RefreshCw, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 const WeatherMaps = ({ weather, getModalPosition }) => {
   const [showMaps, setShowMaps] = useState(false);
   const [selectedLayer, setSelectedLayer] = useState('temp_new');
+  const [mapError, setMapError] = useState(false);
+  const [mapLoading, setMapLoading] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState(12);
+  const [showCities, setShowCities] = useState(true);
+  const [mapCenter, setMapCenter] = useState({ lat: 0, lon: 0 });
 
   useEffect(() => {
     if (getModalPosition) {
@@ -12,26 +18,166 @@ const WeatherMaps = ({ weather, getModalPosition }) => {
     }
   }, [getModalPosition]);
 
+  useEffect(() => {
+    if (weather) {
+      setMapCenter({ lat: weather.coord.lat, lon: weather.coord.lon });
+    }
+  }, [weather]);
+
+  // Handle escape key press and body scroll for custom popup
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && showMaps) {
+        setShowMaps(false);
+      }
+    };
+
+    if (showMaps) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevent body scroll when popup is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      // Restore original styles
+      document.body.style.overflow = '';
+    };
+  }, [showMaps]);
+
   if (!weather) return null;
 
-  const { lat, lon } = weather.coord;
+  const { lat, lon } = mapCenter;
   const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
 
-  const mapLayers = [
-    { id: 'temp_new', name: 'Temperature', description: 'Temperature map' },
-    { id: 'precipitation_new', name: 'Precipitation', description: 'Precipitation map' },
-    { id: 'pressure_new', name: 'Pressure', description: 'Pressure map' },
-    { id: 'wind_new', name: 'Wind', description: 'Wind speed map' },
-    { id: 'clouds_new', name: 'Clouds', description: 'Cloud coverage map' }
-  ];
-
-  const getMapUrl = (layer) => {
-    const zoom = 10;
-    const x = Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
-    const y = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
-    
-    return `https://tile.openweathermap.org/map/${layer}/${zoom}/${x}/${y}.png?appid=${API_KEY}`;
+  const handleMapLoad = () => {
+    setMapLoading(false);
+    setMapError(false);
   };
+
+  const handleMapError = () => {
+    setMapLoading(false);
+    setMapError(true);
+  };
+
+  const getMapUrl = () => {
+    const tileSize = Math.pow(2, zoomLevel);
+    const tileX = Math.floor((lon + 180) / 360 * tileSize);
+    const tileY = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * tileSize);
+    
+    return `https://tile.openweathermap.org/map/${selectedLayer}/${zoomLevel}/${tileX}/${tileY}.png?appid=${API_KEY}`;
+  };
+
+  const getInteractiveMapUrl = () => {
+    const citiesParam = showCities ? 'true' : 'false';
+    return `https://openweathermap.org/weathermap?basemap=map&cities=${citiesParam}&layer=${selectedLayer}&lat=${lat}&lon=${lon}&zoom=${zoomLevel}`;
+  };
+
+  // Handle backdrop click
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      setShowMaps(false);
+    }
+  };
+
+  const customPopup = showMaps ? (
+    <div 
+      className="fixed inset-0 w-screen h-screen bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-2"
+      onClick={handleBackdropClick}
+    >
+      <div className="w-full h-full bg-white/10 backdrop-blur-md rounded-2xl text-white flex flex-col overflow-hidden">
+        {/* Minimal Header */}
+        <div className="flex items-center justify-between p-4 pb-2 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <Map className="h-6 w-6" />
+            <h3 className="text-xl font-semibold">Weather Map - {weather.name}, {weather.sys.country}</h3>
+          </div>
+          <button
+            onClick={() => setShowMaps(false)}
+            className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+            aria-label="Close map"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Full Screen Map Display */}
+        <div className="flex-1 p-4 pt-2">
+          {API_KEY ? (
+            <div className="relative w-full h-full">
+              <div className="relative w-full h-full rounded-lg overflow-hidden bg-gray-100">
+                {mapLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
+                    <div className="text-center text-white">
+                      <RefreshCw className="h-12 w-12 animate-spin mx-auto mb-4" />
+                      <p className="text-lg">Loading weather map...</p>
+                    </div>
+                  </div>
+                )}
+                
+                {mapError ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
+                    <div className="text-center text-white">
+                      <Map className="h-16 w-16 mx-auto mb-4 opacity-70" />
+                      <p className="text-lg mb-4">Map temporarily unavailable</p>
+                      <button
+                        onClick={() => {
+                          setMapError(false);
+                          setMapLoading(true);
+                        }}
+                        className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-lg"
+                      >
+                        Retry Loading Map
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative w-full h-full">
+                    {/* Interactive Map using iframe for better functionality */}
+                    <iframe
+                      key={`${selectedLayer}-${lat}-${lon}-${zoomLevel}-${showCities}`}
+                      src={getInteractiveMapUrl()}
+                      width="100%"
+                      height="100%"
+                      frameBorder="0"
+                      title={`${selectedLayer} weather map`}
+                      className="rounded-lg"
+                      onLoad={handleMapLoad}
+                      onError={handleMapError}
+                      style={{ display: mapLoading ? 'none' : 'block' }}
+                      allow="fullscreen"
+                    />
+                    
+                    {/* Fallback: Use tile approach if iframe fails */}
+                    {mapError && (
+                      <img
+                        src={getMapUrl()}
+                        alt={`${selectedLayer} weather map`}
+                        className="w-full h-full object-cover rounded-lg"
+                        onLoad={handleMapLoad}
+                        onError={() => {
+                          console.error('Both iframe and tile approaches failed');
+                          setMapError(true);
+                          setMapLoading(false);
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-900/50 backdrop-blur-sm h-full rounded-lg flex items-center justify-center">
+              <div className="text-white text-center">
+                <Map className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg">API key required for weather maps</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className="relative">
@@ -43,89 +189,8 @@ const WeatherMaps = ({ weather, getModalPosition }) => {
         <Map className="h-5 w-5" />
       </button>
 
-      {showMaps && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center border-4 border-red-500">
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 text-white">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-semibold">Weather Maps</h3>
-                <button
-                  onClick={() => setShowMaps(false)}
-                  className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              {/* Layer Selection */}
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <Layers className="h-5 w-5" />
-                  <span className="font-medium">Map Layer:</span>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                  {mapLayers.map((layer) => (
-                    <button
-                      key={layer.id}
-                      onClick={() => setSelectedLayer(layer.id)}
-                      className={`p-3 rounded-lg text-sm transition-colors ${
-                        selectedLayer === layer.id
-                          ? 'bg-white/30 text-white'
-                          : 'bg-white/10 text-white/70 hover:bg-white/20'
-                      }`}
-                    >
-                      {layer.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Map Display */}
-              <div className="bg-white/5 rounded-lg p-4">
-                <div className="text-center mb-4">
-                  <h4 className="text-lg font-medium">
-                    {mapLayers.find(l => l.id === selectedLayer)?.name} Map
-                  </h4>
-                  <p className="text-sm opacity-70">
-                    {weather.name}, {weather.sys.country}
-                  </p>
-                </div>
-                
-                {API_KEY ? (
-                  <div className="relative">
-                    <img
-                      src={getMapUrl(selectedLayer)}
-                      alt={`${selectedLayer} map`}
-                      className="w-full h-64 md:h-96 object-cover rounded-lg"
-                      onError={(e) => {
-                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzM3NDE1MSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk1hcCBub3QgYXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
-                      }}
-                    />
-                    <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                      Zoom: 10x
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-gray-200 h-64 md:h-96 rounded-lg flex items-center justify-center">
-                    <div className="text-gray-600 text-center">
-                      <Map className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>API key required for weather maps</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Map Legend */}
-              <div className="mt-4 text-sm opacity-70">
-                <p>
-                  <strong>Note:</strong> Weather maps show real-time data for the selected location.
-                  Different layers provide various meteorological information.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Custom Fullscreen Popup */}
+      {customPopup && createPortal(customPopup, document.body)}
     </div>
   );
 };

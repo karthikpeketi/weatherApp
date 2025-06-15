@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Mic, MicOff } from 'lucide-react';
+import { searchLocations } from '../api';
 
 const VoiceSearch = ({ onLocationFound }) => {
   const [isListening, setIsListening] = useState(false);
@@ -48,11 +49,8 @@ const VoiceSearch = ({ onLocationFound }) => {
         .trim();
 
       if (cleanedTranscript) {
-        // Search for the location
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${cleanedTranscript}&limit=1`
-        );
-        const data = await response.json();
+        // Search for the location using the centralized API function
+        const data = await searchLocations(cleanedTranscript);
         
         if (data && data.length > 0) {
           const location = data[0];
