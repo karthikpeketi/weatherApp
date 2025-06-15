@@ -2,29 +2,36 @@ import axios from 'axios';
 
 // Replace this with your actual OpenWeatherMap API key
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
+
+if (!API_KEY) {
+  console.error('OpenWeatherMap API key is missing. Please set VITE_OPENWEATHER_API_KEY in your environment variables.');
+}
+
 const BASE_URL = 'https://api.openweathermap.org';
+
+const handleApiError = (error, endpoint) => {
+  if (error.response) {
+    console.error(`Error ${endpoint}:`, error.response.status, error.response.data.message);
+    if (error.response.status === 401) {
+      console.error('Invalid API key. Please check your OpenWeatherMap API key configuration.');
+    }
+  } else {
+    console.error(`Error ${endpoint}:`, error.message);
+  }
+  return null;
+};
 
 export const searchLocations = async (query) => {
   if (!query.trim()) return [];
   
-  if (!API_KEY) {
-    console.error('OpenWeatherMap API key is not configured');
-    return [];
-  }
-  
   try {
-    // const response = await axios.get(
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${query}`
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${query}`
     );
     const data = await response.json();
     return data; // Return the API response data
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('Error fetching locations:', error.message);
-    } else {
-      console.error('An unexpected error occurred while fetching locations');
-    }
+    console.error('An unexpected error occurred while fetching locations');
     return []; // Return an empty array in case of an error
   }
   
@@ -43,12 +50,7 @@ export const getWeather = async (lat, lon) => {
     );
     return response.data;
   } catch (error) {
-    if (error instanceof Error) {
-      console.error('Error fetching weather:', error.message);
-    } else {
-      console.error('Error fetching weather');
-    }
-    return null;
+    return handleApiError(error, 'fetching weather');
   }
 };
 
@@ -65,8 +67,7 @@ export const getForecast = async (lat, lon) => {
     );
     return response.data;
   } catch (error) {
-    console.error('Error fetching forecast:', error.message);
-    return null;
+    return handleApiError(error, 'fetching forecast');
   }
 };
 
@@ -83,8 +84,7 @@ export const getAirQuality = async (lat, lon) => {
     );
     return response.data;
   } catch (error) {
-    console.error('Error fetching air quality:', error.message);
-    return null;
+    return handleApiError(error, 'fetching air quality');
   }
 };
 
@@ -101,8 +101,7 @@ export const getUVIndex = async (lat, lon) => {
     );
     return response.data;
   } catch (error) {
-    console.error('Error fetching UV index:', error.message);
-    return null;
+    return handleApiError(error, 'fetching UV index');
   }
 };
 
@@ -119,7 +118,6 @@ export const getWeatherAlerts = async (lat, lon) => {
     );
     return response.data;
   } catch (error) {
-    console.error('Error fetching weather alerts:', error.message);
-    return null;
+    return handleApiError(error, 'fetching weather alerts');
   }
 };

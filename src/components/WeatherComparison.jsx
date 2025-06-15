@@ -75,8 +75,8 @@ const WeatherComparison = ({ currentWeather }) => {
       </button>
 
       {showComparison && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 text-white max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-white/10 backdrop-blur-md rounded-3xl p-6 text-white">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-semibold">Weather Comparison</h3>
               <button

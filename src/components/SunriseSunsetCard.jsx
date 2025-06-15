@@ -5,15 +5,19 @@ const SunriseSunsetCard = ({ weather, uvIndex }) => {
   if (!weather || !weather.sys) return null;
 
   const { sunrise, sunset } = weather.sys;
-  const currentTime = Date.now() / 1000;
+  const currentTime = Date.now() / 1000; // Current time in seconds
   
   const sunriseTime = formatTime(sunrise);
   const sunsetTime = formatTime(sunset);
   
+  // Check if current time is between sunrise and sunset
   const isDaytime = currentTime > sunrise && currentTime < sunset;
+  // Calculate total length of the day in seconds
   const dayLength = sunset - sunrise;
+  // Calculate time elapsed since sunrise, if it's daytime
   const timeElapsed = isDaytime ? currentTime - sunrise : 0;
-  const dayProgress = isDaytime ? (timeElapsed / dayLength) * 100 : 0;
+  // Calculate day progress percentage
+  const dayProgress = isDaytime && dayLength > 0 ? (timeElapsed / dayLength) * 100 : 0;
 
   const getUVLevel = (uv) => {
     if (!uv) return { level: 'N/A', color: 'text-gray-400' };

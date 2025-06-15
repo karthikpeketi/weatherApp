@@ -87,7 +87,7 @@ const VoiceSearch = ({ onLocationFound }) => {
   return (
     <button
       onClick={isListening ? stopListening : startListening}
-      className={`p-2 rounded-full backdrop-blur-md transition-colors ${
+      className={`p-1 rounded-full backdrop-blur-md transition-colors ${
         isListening 
           ? 'bg-red-500/30 text-red-300 animate-pulse' 
           : 'bg-white/20 text-white hover:bg-white/30'

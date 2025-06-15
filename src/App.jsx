@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Cloud, Thermometer, Wind, Droplets, Settings } from "lucide-react";
+import { X, Cloud, Thermometer, Wind, Droplets, Sun, Snowflake, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { searchLocations, getWeather, getForecast, getAirQuality, getUVIndex, getWeatherAlerts } from "./api";
 import { celsiusToFahrenheit, getFromLocalStorage, saveToLocalStorage } from "./utils/weatherUtils";
+import { v4 as uuidv4 } from 'uuid';
 
 // Import new components
 import ForecastCard from "./components/ForecastCard";
@@ -10,13 +11,11 @@ import WeatherAlerts from "./components/WeatherAlerts";
 import FavoriteLocations from "./components/FavoriteLocations";
 import WeatherMaps from "./components/WeatherMaps";
 import UnitToggle from "./components/UnitToggle";
-import ThemeToggle from "./components/ThemeToggle";
 import AirQualityCard from "./components/AirQualityCard";
 import SunriseSunsetCard from "./components/SunriseSunsetCard";
 import WeatherComparison from "./components/WeatherComparison";
 import VoiceSearch from "./components/VoiceSearch";
 import WeatherHistory from "./components/WeatherHistory";
-import ExportData from "./components/ExportData";
 
 function App() {
 	const [query, setQuery] = useState("");
@@ -26,6 +25,7 @@ function App() {
 	const [error, setError] = useState("");
 	const [showSuggestions, setShowSuggestions] = useState(false);
 	const [isLocationSelected, setIsLocationSelected] = useState(false);
+	const [selectedLocation, setSelectedLocation] = useState(null);
 	const searchRef = useRef(null);
 	const searchInputRef = useRef(null);
 
@@ -37,7 +37,6 @@ function App() {
 	const [unit, setUnit] = useState(getFromLocalStorage('temperatureUnit') || 'celsius');
 	const [isDarkTheme, setIsDarkTheme] = useState(getFromLocalStorage('isDarkTheme') || false);
 	const [showHourlyForecast, setShowHourlyForecast] = useState(false);
-	const [showSettings, setShowSettings] = useState(false);
 
 	// Weather condition backgrounds mapping
 	const weatherBackgrounds = {
@@ -61,6 +60,29 @@ function App() {
 		default:
 			"https://images.unsplash.com/photo-1601297183305-6df142704ea2?auto=format&fit=crop&q=80",
 	};
+
+	useEffect(() => {
+		window.saveWeatherToHistory = (weatherData) => {
+			const newEntry = {
+				id: uuidv4(),
+				location: weatherData.name,
+				country: weatherData.sys.country,
+				weather: weatherData,
+				timestamp: Date.now(),
+				lat: weatherData.coord.lat,
+				lon: weatherData.coord.lon,
+			};
+			const history = getFromLocalStorage('weatherHistory') || [];
+			const newHistory = [newEntry, ...history.slice(0, 49)]; // Keep last 50 entries
+			saveToLocalStorage('weatherHistory', newHistory);
+		};
+	}, []);
+
+	useEffect(() => {
+		if (selectedLocation) {
+			getWeatherAtLocation(selectedLocation.lat, selectedLocation.lon);
+		}
+	}, [selectedLocation]);
 
 	const getWeatherAtLocation = async (latitude, longitude) => {
 		try {
@@ -151,7 +173,7 @@ function App() {
 			}
 		};
 
-		const timeoutId = setTimeout(fetchLocations, 300);
+		const timeoutId = setTimeout(fetchLocations, 150);
 		return () => clearTimeout(timeoutId);
 	}, [query]);
 
@@ -159,7 +181,7 @@ function App() {
 		setQuery(location.display_name);
 		setIsLocationSelected(true);
 		setShowSuggestions(false);
-		await getWeatherAtLocation(location.lat, location.lon);
+		setSelectedLocation(location);
 	};
 
 	const getBackgroundImage = () => {
@@ -183,17 +205,11 @@ function App() {
 		saveToLocalStorage('temperatureUnit', newUnit);
 	};
 
-	const handleThemeChange = () => {
-		const newTheme = !isDarkTheme;
-		setIsDarkTheme(newTheme);
-		saveToLocalStorage('isDarkTheme', newTheme);
-	};
-
 	const handleVoiceLocationFound = (location) => {
 		setQuery(location.display_name);
 		setIsLocationSelected(true);
 		setShowSuggestions(false);
-		getWeatherAtLocation(location.lat, location.lon);
+		setSelectedLocation(location);
 	};
 
 	const handleFavoriteLocationSelect = (lat, lon) => {
@@ -203,6 +219,9 @@ function App() {
 	// Temperature conversion helper
 	const convertTemperature = (temp) => {
 		return unit === 'fahrenheit' ? Math.round(celsiusToFahrenheit(temp)) : Math.round(temp);
+	};
+	const getModalPosition = () => {
+		return searchRef.current?.getBoundingClientRect();
 	};
 	return (
 		<div
@@ -215,43 +234,30 @@ function App() {
 		>
 			<div className="min-h-screen bg-black/30 backdrop-blur-sm px-[15px] md:px-[25px] xl:px-[40px]">
 				{/* Header with Logo, Search, and Controls */}
-				<div className="min-h-[15vh] flex items-center justify-between mb-6">
-					<div className="text-white font-bold text-2xl select-none">
-						Weather<span className="text-yellow-400">⚡</span>
-					</div>
-					
+				<div className="flex flex-col sm:flex-row justify-between items-center mb-6">
+				    <h1 className="text-3xl font-bold text-center text-white mb-6 mt-4">Weatherwise</h1>
 					{/* Search and Controls */}
-					<div className="flex items-center gap-4">
+					<div className="flex flex-col sm:flex-row gap-4">
 						{/* Control Buttons */}
 						<div className="flex items-center gap-2">
 							<UnitToggle unit={unit} onUnitChange={handleUnitChange} />
-							{/* <ThemeToggle isDark={isDarkTheme} onThemeChange={handleThemeChange} /> */}
-							<VoiceSearch onLocationFound={handleVoiceLocationFound} />
 							<FavoriteLocations 
 								currentLocation={weather} 
 								onLocationSelect={handleFavoriteLocationSelect} 
 							/>
-							<WeatherMaps weather={weather} />
+							<WeatherMaps weather={weather} getModalPosition={getModalPosition} />
 							<WeatherComparison currentWeather={weather} />
-							<WeatherHistory />
-							<ExportData weather={weather} forecast={forecast} />
+							<WeatherHistory setSelectedLocation={setSelectedLocation} />
 							
-							<button
-								onClick={() => setShowSettings(!showSettings)}
-								className="p-2 rounded-full bg-white/20 backdrop-blur-md text-white hover:bg-white/30 transition-colors"
-								title="Settings"
-							>
-								<Settings className="h-5 w-5" />
-							</button>
+							
 						</div>
-
 						{/* Location search */}
-						<div className="relative z-50" ref={searchRef}>
+						<div className="relative" ref={searchRef}>
 							<input
 								ref={searchInputRef}
 								type="text"
 								placeholder="Search Location..."
-								className="w-full md:w-[300px] bg-white/20 backdrop-blur-md text-white placeholder-white/70 px-4 py-2 rounded-lg pr-10 focus:outline-none focus:ring-2 focus:ring-white/50"
+								className="w-full bg-white/20 backdrop-blur-md text-white placeholder-white/70 px-4 py-2 rounded-lg pr-20 focus:outline-none focus:ring-2 focus:ring-white/50"
 								value={query}
 								onChange={(e) => {
 									setIsLocationSelected(false);
@@ -259,9 +265,12 @@ function App() {
 								}}
 								onFocus={() => query.length >= 2 && setShowSuggestions(true)}
 							/>
-							<button onClick={handleOnClearLocation}>
-								<X className="absolute right-3 top-2.5 text-white/70 h-5 w-5" />
-							</button>
+							<div className="absolute right-3 top-1.5 flex items-center gap-2">
+								<button onClick={handleOnClearLocation}>
+									<X className="h-6 w-6 text-white/70" />
+								</button>
+								<VoiceSearch onLocationFound={handleVoiceLocationFound} />
+							</div>
 
 							{/* Location Suggestions */}
 							{showSuggestions && locations.length > 0 && (
@@ -302,9 +311,21 @@ function App() {
 						{/* Main Weather Display */}
 						<div className="md:flex md:flex-row md:justify-between md:items-start select-none cursor-text gap-8">
 							<div className="text-white mb-8 md:mb-0">
-								<div className="text-8xl font-light mb-4">
-									{convertTemperature(weather.main.temp)}°{unit === 'fahrenheit' ? 'F' : 'C'}
-								</div>
+								{weather && (
+									<div className="flex items-center gap-2">
+										<div className="text-5xl">
+											{weather.weather[0].main === 'Clear' && <Sun className="h-16 w-16 md:h-20 md:w-20" />}
+											{weather.weather[0].main === 'Clouds' && <Cloud className="h-16 w-16 md:h-20 md:w-20" />}
+											{weather.weather[0].main === 'Rain' && <Droplets className="h-16 w-16 md:h-20 md:w-20" />}
+											{weather.weather[0].main === 'Snow' && <Snowflake className="h-16 w-16 md:h-20 md:w-20" />}
+											{weather.weather[0].main === 'Thunderstorm' && <Zap className="h-16 w-16 md:h-20 md:w-20" />}
+										</div>
+										<h1 className="text-5xl font-bold">
+											{unit === 'celsius' ? Math.round(weather.main.temp) : celsiusToFahrenheit(weather.main.temp)}
+											<span>°{unit === 'celsius' ? 'C' : 'F'}</span>
+										</h1>
+									</div>
+								)}
 								<div className="text-3xl mb-2">
 									{weather.name}, {weather.sys.country}
 								</div>
@@ -385,8 +406,8 @@ function App() {
 
 						{/* Additional Weather Cards */}
 						<div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-							{/* Sunrise/Sunset & UV Card */}
-							<SunriseSunsetCard weather={weather} uvIndex={uvIndex} />
+							{/* UV Card */}
+							{uvIndex && <SunriseSunsetCard weather={weather} uvIndex={uvIndex} />}
 							
 							{/* Air Quality Card */}
 							{airQuality && <AirQualityCard airQuality={airQuality} />}

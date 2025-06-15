@@ -1,17 +1,7 @@
 // Weather utility functions
 
 export const celsiusToFahrenheit = (celsius) => {
-  return (celsius * 9/5) + 32;
-};
-
-export const fahrenheitToCelsius = (fahrenheit) => {
-  return (fahrenheit - 32) * 5/9;
-};
-
-export const getWindDirection = (degrees) => {
-  const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-  const index = Math.round(degrees / 22.5) % 16;
-  return directions[index];
+  return Math.round((celsius * 9/5) + 32);
 };
 
 export const getAirQualityLevel = (aqi) => {
