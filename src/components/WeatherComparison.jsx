@@ -1,30 +1,13 @@
 import { useState } from 'react';
-import { BarChart3, X, Plus } from 'lucide-react';
-import { getWeather, searchLocations as apiSearchLocations } from '../api';
+import { BarChart3, X } from 'lucide-react';
+import { getWeather } from '../api';
 import ReusablePopup from './ReusablePopup';
+import LocationSuggestions from './LocationSuggestions';
 
 const WeatherComparison = ({ currentWeather }) => {
   const [showComparison, setShowComparison] = useState(false);
   const [comparisonLocations, setComparisonLocations] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  const searchLocations = async (query) => {
-    if (query.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      const data = await apiSearchLocations(query);
-      // Limit to 5 results for the comparison component
-      setSearchResults(data.slice(0, 5));
-    } catch (error) {
-      console.error('Error searching locations:', error);
-      setSearchResults([]);
-    }
-  };
 
   const addLocationForComparison = async (location) => {
     setLoading(true);
@@ -38,8 +21,6 @@ const WeatherComparison = ({ currentWeather }) => {
           weather: weatherData
         };
         setComparisonLocations(prev => [...prev, newLocation]);
-        setSearchQuery('');
-        setSearchResults([]);
       }
     } catch (error) {
       console.error('Error fetching weather for comparison:', error);
@@ -82,35 +63,16 @@ const WeatherComparison = ({ currentWeather }) => {
       >
         {/* Add Location Search */}
         <div className="mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search location to compare..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                searchLocations(e.target.value);
-              }}
-              className="w-full bg-white/20 backdrop-blur-md text-white placeholder-white/70 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50"
-            />
-            <Plus className="absolute right-3 top-3.5 text-white/70 h-5 w-5" />
-          </div>
-
-          {/* Search Results */}
-          {searchResults.length > 0 && (
-            <div className="mt-2 bg-white/90 backdrop-blur-md rounded-lg shadow-lg overflow-hidden">
-              {searchResults.map((location, index) => (
-                <button
-                  key={index}
-                  onClick={() => addLocationForComparison(location)}
-                  disabled={loading}
-                  className="w-full px-4 py-3 text-left hover:bg-white/50 transition-colors border-b border-white/10 last:border-0 text-gray-800"
-                >
-                  {location.display_name}
-                </button>
-              ))}
-            </div>
-          )}
+          <LocationSuggestions
+            placeholder="Search location to compare..."
+            onLocationSelect={addLocationForComparison}
+            maxResults={5}
+            showIcon={true}
+            showClearButton={true}
+            showFilters={true}
+            disabled={loading}
+            className="w-full"
+          />
         </div>
 
         {/* Comparison Table */}

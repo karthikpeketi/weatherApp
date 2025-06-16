@@ -16,18 +16,14 @@ import SunriseSunsetCard from "./components/SunriseSunsetCard";
 import WeatherComparison from "./components/WeatherComparison";
 import VoiceSearch from "./components/VoiceSearch";
 import WeatherHistory from "./components/WeatherHistory";
+import LocationSuggestions from "./components/LocationSuggestions";
 
 function App() {
-	const [query, setQuery] = useState("");
-	const [locations, setLocations] = useState([]);
 	const [weather, setWeather] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
-	const [showSuggestions, setShowSuggestions] = useState(false);
-	const [isLocationSelected, setIsLocationSelected] = useState(false);
 	const [selectedLocation, setSelectedLocation] = useState(null);
 	const searchRef = useRef(null);
-	const searchInputRef = useRef(null);
 
 	// New state for additional features
 	const [forecast, setForecast] = useState(null);
@@ -107,7 +103,6 @@ function App() {
 				}
 			} else {
 				setError("Failed to fetch weather data");
-				searchInputRef.current?.focus();
 				return;
 			}
 
@@ -130,7 +125,6 @@ function App() {
 
 		} catch (err) {
 			setError("Failed to fetch weather data");
-			searchInputRef.current?.focus();
 		} finally {
 			setLoading(false);
 		}
@@ -148,39 +142,14 @@ function App() {
 				(error) => {
 					console.error("Geolocation error:", error.message);
 					setError("Please enter your location manually");
-					searchInputRef.current?.focus();
 				}
 			);
 		} else {
 			setError("Geolocation is not supported by your browser");
-			searchInputRef.current?.focus();
 		}
 	}, []);
 
-	useEffect(() => {
-		const fetchLocations = async () => {
-			if (query.length >= 2 && !isLocationSelected) {
-				try {
-					const results = await searchLocations(query);
-					setLocations(results);
-					setShowSuggestions(true);
-				} catch (err) {
-					setLocations([]);
-				}
-			} else {
-				setLocations([]);
-				setShowSuggestions(false);
-			}
-		};
-
-		const timeoutId = setTimeout(fetchLocations, 150);
-		return () => clearTimeout(timeoutId);
-	}, [query]);
-
-	const handleLocationSelect = async (location) => {
-		setQuery(location.display_name);
-		setIsLocationSelected(true);
-		setShowSuggestions(false);
+	const handleLocationSelect = (location) => {
 		setSelectedLocation(location);
 	};
 
@@ -190,14 +159,7 @@ function App() {
 		return weatherBackgrounds[condition] || weatherBackgrounds.default;
 	};
 
-	const handleOnClearLocation = () => {
-		if (query != "") {
-			setQuery("");
-			setIsLocationSelected(false);
-			setShowSuggestions(false);
-			searchInputRef.current?.focus();
-		}
-	};
+
 
 	// New handler functions
 	const handleUnitChange = (newUnit) => {
@@ -206,9 +168,6 @@ function App() {
 	};
 
 	const handleVoiceLocationFound = (location) => {
-		setQuery(location.display_name);
-		setIsLocationSelected(true);
-		setShowSuggestions(false);
 		setSelectedLocation(location);
 	};
 
@@ -252,42 +211,18 @@ function App() {
 							
 						</div>
 						{/* Location search */}
-						<div className="relative" ref={searchRef}>
-							<input
-								ref={searchInputRef}
-								type="text"
+						<div className="flex items-center gap-2">
+							<LocationSuggestions
 								placeholder="Search Location..."
-								className="w-full bg-white/20 backdrop-blur-md text-white placeholder-white/70 px-4 py-2 rounded-lg pr-20 focus:outline-none focus:ring-2 focus:ring-white/50"
-								value={query}
-								onChange={(e) => {
-									setIsLocationSelected(false);
-									setQuery(e.target.value);
-								}}
-								onFocus={() => query.length >= 2 && setShowSuggestions(true)}
+								onLocationSelect={handleLocationSelect}
+								showIcon={true}
+								showClearButton={true}
+								showFilters={true}
+								autoFocus={error ? true : false}
+								className="flex-1"
+								inputClassName="py-2"
 							/>
-							<div className="absolute right-3 top-1.5 flex items-center gap-2">
-								<button onClick={handleOnClearLocation}>
-									<X className="h-6 w-6 text-white/70" />
-								</button>
-								<VoiceSearch onLocationFound={handleVoiceLocationFound} />
-							</div>
-
-							{/* Location Suggestions */}
-							{showSuggestions && locations.length > 0 && (
-								<div className="absolute mt-2 w-full bg-white/90 backdrop-blur-md rounded-lg shadow-lg overflow-auto max-h-96">
-									{locations.map((location, index) => (
-										<div
-											key={`${location.lat}-${location.lon}-${index}`}
-											className="px-4 py-3 hover:bg-white/50 cursor-pointer transition-colors border-b border-white/10 last:border-0"
-											onClick={() => handleLocationSelect(location)}
-										>
-											<div className="text-gray-800 font-medium">
-												{location.display_name}
-											</div>
-										</div>
-									))}
-								</div>
-							)}
+							<VoiceSearch onLocationFound={handleVoiceLocationFound} />
 						</div>
 					</div>
 				</div>
