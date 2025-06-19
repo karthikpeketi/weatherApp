@@ -1,48 +1,43 @@
 import { useState, useEffect } from 'react';
-import { History, Calendar } from 'lucide-react';
+import { History, Calendar, Clock } from 'lucide-react';
 import { getFromLocalStorage, saveToLocalStorage } from '../utils/weatherUtils';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import ReusablePopup from './ReusablePopup';
 
 const WeatherHistory = ({ setSelectedLocation }) => {
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState([]);
 
+  // Load history from localStorage (already cleaned by App.jsx)
   useEffect(() => {
-    const savedHistory = getFromLocalStorage('weatherHistory') || [];
-    setHistory(savedHistory);
-  }, []);
+    const loadHistory = () => {
+      const savedHistory = getFromLocalStorage('weatherHistory') || [];
+      setHistory(savedHistory);
+    };
 
-  const saveWeatherToHistory = (weatherData) => {
-    if (!weatherData) return;
+    loadHistory();
 
-    const locationString = `${weatherData.name}, ${weatherData.sys.country}`;
+    // Listen for storage changes to keep component in sync
+    const handleStorageChange = () => {
+      loadHistory();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
     
-    // Check if this location already exists in history
-    const isDuplicate = history.some(entry => 
-      entry.location === locationString
-    );
+    // Custom event listener for when history is updated by the app
+    window.addEventListener('weatherHistoryUpdated', handleStorageChange);
 
-    if (!isDuplicate) {
-      const historyEntry = {
-        id: Date.now(),
-        location: locationString,
-        temperature: weatherData.main.temp,
-        condition: weatherData.weather[0].main,
-        description: weatherData.weather[0].description,
-        timestamp: Date.now(),
-        coords: weatherData.coord
-      };
-
-      const updatedHistory = [historyEntry, ...history.slice(0, 49)];
-      setHistory(updatedHistory);
-      saveToLocalStorage('weatherHistory', updatedHistory);
-    }
-  };
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('weatherHistoryUpdated', handleStorageChange);
+    };
+  }, []);
 
   const clearHistory = () => {
     setHistory([]);
     saveToLocalStorage('weatherHistory', []);
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('weatherHistoryUpdated'));
   };
 
   const groupHistoryByDate = (historyData) => {
@@ -57,15 +52,15 @@ const WeatherHistory = ({ setSelectedLocation }) => {
     return grouped;
   };
 
-  const groupedHistory = groupHistoryByDate(history);
+  const getTimeAgo = (timestamp) => {
+    try {
+      return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+    } catch (error) {
+      return 'Unknown time';
+    }
+  };
 
-  // Expose the save function to parent component
-  useEffect(() => {
-    window.saveWeatherToHistory = saveWeatherToHistory;
-    return () => {
-      delete window.saveWeatherToHistory;
-    };
-  }, [history]);
+  const groupedHistory = groupHistoryByDate(history);
 
   return (
     <div className="relative">
@@ -87,16 +82,23 @@ const WeatherHistory = ({ setSelectedLocation }) => {
         onClose={() => setShowHistory(false)}
         title="Weather History"
         titleIcon={<History className="h-6 w-6" />}
-        maxWidth="max-w-4xl"
+        maxWidth="70%"
       >
         {history.length === 0 ? (
           <div className="text-center py-12 opacity-70">
             <History className="h-16 w-16 mx-auto mb-4 opacity-50" />
-            <p>No weather history yet</p>
-            <p className="text-sm mt-2">Search for locations to build your weather history</p>
+            <p className="text-lg font-medium">No recent weather history</p>
+            <p className="text-sm mt-2 opacity-80">Search for locations to build your weather history</p>
+            <p className="text-xs mt-1 opacity-60">History is automatically kept for 3 days</p>
           </div>
         ) : (
           <div className="space-y-6">
+            <div className="text-center mb-4">
+              <p className="text-sm opacity-70">
+                Showing {history.length} recent searches (last 3 days)
+              </p>
+            </div>
+            
             {Object.entries(groupedHistory).map(([date, entries]) => (
               <div key={date}>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/20">
@@ -110,29 +112,35 @@ const WeatherHistory = ({ setSelectedLocation }) => {
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {entries.map((entry, index) => (
                     <div 
-                      key={index} 
+                      key={entry.id || index} 
                       className="bg-white/5 backdrop-blur-md rounded-2xl p-4 hover:bg-white/10 transition-colors cursor-pointer"
                       onClick={() => {
-                        if (setSelectedLocation) {
+                        if (setSelectedLocation && entry.coords) {
                           setSelectedLocation({ lat: entry.coords.lat, lon: entry.coords.lon });
                         }
                         setShowHistory(false);
                       }}
                     >
                       <div className="flex justify-between items-start">
-                        <div>
+                        <div className="flex-1">
                           <div className="font-medium text-lg">{entry.location}</div>
-                          <div className="text-sm opacity-80">{format(new Date(entry.timestamp), 'HH:mm')}</div>
+                          <div className="flex items-center gap-2 text-sm opacity-80 mt-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{getTimeAgo(entry.timestamp)}</span>
+                          </div>
+                          <div className="text-xs opacity-60 mt-1">
+                            {format(new Date(entry.timestamp), 'HH:mm')}
+                          </div>
                         </div>
                         <div className="text-right">
                           <div className="text-xl font-bold">{Math.round(entry.temperature)}°</div>
                         </div>
                       </div>
                       <div className="mt-3 flex items-center gap-2">
-                        <div className="text-sm">
+                        <div className="text-sm font-medium">
                           {entry.condition}
                         </div>
-                        <div className="opacity-70 capitalize">{entry.description}</div>
+                        <div className="opacity-70 capitalize text-sm">{entry.description}</div>
                       </div>
                     </div>
                   ))}

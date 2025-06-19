@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Cloud, Thermometer, Wind, Droplets, Sun, Snowflake, Zap } from "lucide-react";
+import { Cloud, Thermometer, Wind, Droplets, Sun, Snowflake, Zap, Eye } from "lucide-react";
 import { format } from "date-fns";
-import { searchLocations, getWeather, getForecast, getAirQuality, getUVIndex, getWeatherAlerts } from "./api";
+import { getWeather, getForecast, getAirQuality, getUVIndex } from "./api";
 import { celsiusToFahrenheit, getFromLocalStorage, saveToLocalStorage } from "./utils/weatherUtils";
 import { v4 as uuidv4 } from 'uuid';
 
 // Import new components
 import ForecastCard from "./components/ForecastCard";
-import WeatherAlerts from "./components/WeatherAlerts";
 import FavoriteLocations from "./components/FavoriteLocations";
 import WeatherMaps from "./components/WeatherMaps";
 import UnitToggle from "./components/UnitToggle";
@@ -17,6 +16,10 @@ import WeatherComparison from "./components/WeatherComparison";
 import VoiceSearch from "./components/VoiceSearch";
 import WeatherHistory from "./components/WeatherHistory";
 import LocationSuggestions from "./components/LocationSuggestions";
+
+// Import reusable UI components
+import { Card, CardHeader, CardContent, CardTitle } from "./components/ui";
+import { Button, WeatherDetailItem, LoadingSpinner } from "./components/ui";
 
 function App() {
 	const [weather, setWeather] = useState(null);
@@ -29,10 +32,47 @@ function App() {
 	const [forecast, setForecast] = useState(null);
 	const [airQuality, setAirQuality] = useState(null);
 	const [uvIndex, setUVIndex] = useState(null);
-	const [alerts, setAlerts] = useState([]);
 	const [unit, setUnit] = useState(getFromLocalStorage('temperatureUnit') || 'celsius');
-	const [isDarkTheme, setIsDarkTheme] = useState(getFromLocalStorage('isDarkTheme') || false);
 	const [showHourlyForecast, setShowHourlyForecast] = useState(false);
+
+	// Custom weather details array
+	const getWeatherDetails = (weather, unit, convertTemperature) => [
+		{
+			icon: Thermometer,
+			label: "Temp max",
+			value: `${convertTemperature(weather.main.temp_max)}°${unit === 'fahrenheit' ? 'F' : 'C'}`
+		},
+		{
+			icon: Thermometer,
+			label: "Temp min",
+			value: `${convertTemperature(weather.main.temp_min)}°${unit === 'fahrenheit' ? 'F' : 'C'}`
+		},
+		{
+			icon: Droplets,
+			label: "Humidity",
+			value: `${weather.main.humidity}%`
+		},
+		{
+			icon: Cloud,
+			label: "Cloudy",
+			value: `${weather.clouds.all}%`
+		},
+		{
+			icon: Wind,
+			label: "Wind",
+			value: `${Math.round(weather.wind.speed * 3.6)}km/h`
+		},
+		{
+			icon: Thermometer,
+			label: "Pressure",
+			value: `${weather.main.pressure} hPa`
+		},
+		{
+			icon: Eye,
+			label: "Visibility",
+			value: `${weather.visibility ? (weather.visibility / 1000).toFixed(1) : 'N/A'} km`
+		}
+	];
 
 	// Weather condition backgrounds mapping
 	const weatherBackgrounds = {
@@ -57,20 +97,73 @@ function App() {
 			"https://images.unsplash.com/photo-1601297183305-6df142704ea2?auto=format&fit=crop&q=80",
 	};
 
+	// Cleanup old weather history entries on app load
 	useEffect(() => {
+		const cleanupOldHistoryEntries = () => {
+			const history = getFromLocalStorage('weatherHistory') || [];
+			const currentTime = Date.now();
+			const threeDaysAgo = currentTime - (3 * 24 * 60 * 60 * 1000); // 3 days in milliseconds
+			
+			// Filter out entries older than 3 days
+			const validEntries = history.filter(entry => {
+				// Handle both old entries without timestamp and new entries with timestamp
+				const entryTime = entry.timestamp || entry.id || 0;
+				return entryTime > threeDaysAgo;
+			});
+			
+			// Only update localStorage if we actually removed entries
+			if (validEntries.length !== history.length) {
+				saveToLocalStorage('weatherHistory', validEntries);
+				console.log(`Cleaned up ${history.length - validEntries.length} old weather history entries`);
+			}
+		};
+
+		// Clean up old entries on app load
+		cleanupOldHistoryEntries();
+
+		// Set up the global save function with automatic cleanup
 		window.saveWeatherToHistory = (weatherData) => {
+			const currentTime = Date.now();
+			const threeDaysAgo = currentTime - (3 * 24 * 60 * 60 * 1000);
+			
+			// Get existing history and clean it
+			const existingHistory = getFromLocalStorage('weatherHistory') || [];
+			const cleanHistory = existingHistory.filter(entry => {
+				const entryTime = entry.timestamp || entry.id || 0;
+				return entryTime > threeDaysAgo;
+			});
+			
+			// Create new entry with timestamp
 			const newEntry = {
 				id: uuidv4(),
-				location: weatherData.name,
+				location: `${weatherData.name}, ${weatherData.sys.country}`,
 				country: weatherData.sys.country,
 				weather: weatherData,
-				timestamp: Date.now(),
-				lat: weatherData.coord.lat,
-				lon: weatherData.coord.lon,
+				temperature: weatherData.main.temp,
+				condition: weatherData.weather[0].main,
+				description: weatherData.weather[0].description,
+				timestamp: currentTime,
+				coords: {
+					lat: weatherData.coord.lat,
+					lon: weatherData.coord.lon
+				}
 			};
-			const history = getFromLocalStorage('weatherHistory') || [];
-			const newHistory = [newEntry, ...history.slice(0, 49)]; // Keep last 50 entries
+			
+			// Remove any existing entry for the same location to avoid duplicates
+			const filteredHistory = cleanHistory.filter(entry => 
+				entry.location !== newEntry.location
+			);
+			
+			// Add new entry at the beginning
+			const newHistory = [newEntry, ...filteredHistory];
 			saveToLocalStorage('weatherHistory', newHistory);
+		};
+
+		// Cleanup function
+		return () => {
+			if (window.saveWeatherToHistory) {
+				delete window.saveWeatherToHistory;
+			}
 		};
 	}, []);
 
@@ -86,12 +179,11 @@ function App() {
 			setError("");
 			
 			// Fetch all weather data
-			const [weatherData, forecastData, airQualityData, uvData, alertsData] = await Promise.allSettled([
+			const [weatherData, forecastData, airQualityData, uvData] = await Promise.allSettled([
 				getWeather(latitude, longitude),
 				getForecast(latitude, longitude),
 				getAirQuality(latitude, longitude),
 				getUVIndex(latitude, longitude),
-				getWeatherAlerts(latitude, longitude)
 			]);
 
 			if (weatherData.status === 'fulfilled' && weatherData.value) {
@@ -117,10 +209,6 @@ function App() {
 
 			if (uvData.status === 'fulfilled' && uvData.value) {
 				setUVIndex(uvData.value);
-			}
-
-			if (alertsData.status === 'fulfilled' && alertsData.value && alertsData.value.alerts) {
-				setAlerts(alertsData.value.alerts);
 			}
 
 		} catch (err) {
@@ -184,9 +272,7 @@ function App() {
 	};
 	return (
 		<div
-			className={`min-h-screen w-full bg-cover bg-center bg-no-repeat transition-all duration-1000 ${
-				isDarkTheme ? 'brightness-75' : ''
-			}`}
+			className={"min-h-screen w-full bg-cover bg-center bg-no-repeat transition-all duration-1000"}
 			style={{
 				backgroundImage: `url("${getBackgroundImage()}")`,
 			}}
@@ -227,9 +313,6 @@ function App() {
 					</div>
 				</div>
 
-				{/* Weather Alerts */}
-				<WeatherAlerts alerts={alerts} />
-
 				{error && (
 					<div className="text-red-400 text-center mb-4 bg-red-900/20 backdrop-blur-sm p-4 rounded-lg">
 						{error}
@@ -238,10 +321,7 @@ function App() {
 
 				{loading ? (
 					<div className="fixed inset-0 flex items-center justify-center z-50">
-						<div className="text-white text-center select-none">
-							<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-							<p className="text-lg">Loading weather data...</p>
-						</div>
+						<LoadingSpinner size="lg" text="Loading weather data..." />
 					</div>
 				) : weather ? (
 					<div className="space-y-8">
@@ -278,67 +358,21 @@ function App() {
 							</div>
 
 							{/* Weather Details Card */}
-							<div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 text-white max-w-md md:min-w-96">
-								<h2 className="text-xl mb-6">Weather Details</h2>
-
-								<div className="space-y-6">
-									<div className="flex justify-between items-center">
-										<div className="flex items-center gap-2">
-											<Thermometer className="h-5 w-5" />
-											<span>Temp max</span>
-										</div>
-										<span>{convertTemperature(weather.main.temp_max)}°{unit === 'fahrenheit' ? 'F' : 'C'}</span>
-									</div>
-
-									<div className="flex justify-between items-center">
-										<div className="flex items-center gap-2">
-											<Thermometer className="h-5 w-5" />
-											<span>Temp min</span>
-										</div>
-										<span>{convertTemperature(weather.main.temp_min)}°{unit === 'fahrenheit' ? 'F' : 'C'}</span>
-									</div>
-
-									<div className="flex justify-between items-center">
-										<div className="flex items-center gap-2">
-											<Droplets className="h-5 w-5" />
-											<span>Humidity</span>
-										</div>
-										<span>{weather.main.humidity}%</span>
-									</div>
-
-									<div className="flex justify-between items-center">
-										<div className="flex items-center gap-2">
-											<Cloud className="h-5 w-5" />
-											<span>Cloudy</span>
-										</div>
-										<span>{weather.clouds.all}%</span>
-									</div>
-
-									<div className="flex justify-between items-center">
-										<div className="flex items-center gap-2">
-											<Wind className="h-5 w-5" />
-											<span>Wind</span>
-										</div>
-										<span>{Math.round(weather.wind.speed * 3.6)}km/h</span>
-									</div>
-
-									<div className="flex justify-between items-center">
-										<div className="flex items-center gap-2">
-											<Thermometer className="h-5 w-5" />
-											<span>Pressure</span>
-										</div>
-										<span>{weather.main.pressure} hPa</span>
-									</div>
-
-									<div className="flex justify-between items-center">
-										<div className="flex items-center gap-2">
-											<Cloud className="h-5 w-5" />
-											<span>Visibility</span>
-										</div>
-										<span>{weather.visibility ? (weather.visibility / 1000).toFixed(1) : 'N/A'} km</span>
-									</div>
-								</div>
-							</div>
+							<Card className="p-8 max-w-md md:min-w-96">
+								<CardHeader className="p-0 pb-6">
+									<CardTitle>Weather Details</CardTitle>
+								</CardHeader>
+								<CardContent className="p-0 space-y-6">
+									{getWeatherDetails(weather, unit, convertTemperature).map((detail, index) => (
+										<WeatherDetailItem
+											key={index}
+											icon={detail.icon}
+											label={detail.label}
+											value={detail.value}
+										/>
+									))}
+								</CardContent>
+							</Card>
 						</div>
 
 						{/* Additional Weather Cards */}
@@ -353,26 +387,20 @@ function App() {
 						{/* Forecast Toggle Buttons */}
 						{forecast && (
 							<div className="flex justify-center gap-4 mb-6">
-								<button
+								<Button
+									variant={!showHourlyForecast ? 'primary' : 'secondary'}
+									size="lg"
 									onClick={() => setShowHourlyForecast(false)}
-									className={`px-6 py-3 rounded-lg backdrop-blur-md transition-colors ${
-										!showHourlyForecast 
-											? 'bg-white/30 text-white' 
-											: 'bg-white/10 text-white/70 hover:bg-white/20'
-									}`}
 								>
 									5-Day Forecast
-								</button>
-								<button
+								</Button>
+								<Button
+									variant={showHourlyForecast ? 'primary' : 'secondary'}
+									size="lg"
 									onClick={() => setShowHourlyForecast(true)}
-									className={`px-6 py-3 rounded-lg backdrop-blur-md transition-colors ${
-										showHourlyForecast 
-											? 'bg-white/30 text-white' 
-											: 'bg-white/10 text-white/70 hover:bg-white/20'
-									}`}
 								>
 									24-Hour Forecast
-								</button>
+								</Button>
 							</div>
 						)}
 
