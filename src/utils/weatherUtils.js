@@ -76,3 +76,81 @@ export const exportWeatherData = (weatherData, forecast) => {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
+
+// Weather history management utilities
+export const HISTORY_RETENTION_DAYS = 3;
+export const HISTORY_RETENTION_MS = HISTORY_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+
+export const cleanupOldHistoryEntries = () => {
+  const history = getFromLocalStorage('weatherHistory') || [];
+  const currentTime = Date.now();
+  const cutoffTime = currentTime - HISTORY_RETENTION_MS;
+  
+  // Filter out entries older than retention period
+  const validEntries = history.filter(entry => {
+    // Handle both old entries without timestamp and new entries with timestamp
+    const entryTime = entry.timestamp || entry.id || 0;
+    return entryTime > cutoffTime;
+  });
+  
+  // Only update localStorage if we actually removed entries
+  if (validEntries.length !== history.length) {
+    saveToLocalStorage('weatherHistory', validEntries);
+    console.log(`Cleaned up ${history.length - validEntries.length} old weather history entries`);
+    
+    // Dispatch custom event to notify components
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('weatherHistoryUpdated'));
+    }
+    
+    return validEntries.length;
+  }
+  
+  return history.length;
+};
+
+export const addWeatherToHistory = (weatherData) => {
+  if (!weatherData) return;
+
+  const currentTime = Date.now();
+  const cutoffTime = currentTime - HISTORY_RETENTION_MS;
+  
+  // Get existing history and clean it
+  const existingHistory = getFromLocalStorage('weatherHistory') || [];
+  const cleanHistory = existingHistory.filter(entry => {
+    const entryTime = entry.timestamp || entry.id || 0;
+    return entryTime > cutoffTime;
+  });
+  
+  // Create new entry with timestamp
+  const newEntry = {
+    id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    location: `${weatherData.name}, ${weatherData.sys.country}`,
+    country: weatherData.sys.country,
+    weather: weatherData,
+    temperature: weatherData.main.temp,
+    condition: weatherData.weather[0].main,
+    description: weatherData.weather[0].description,
+    timestamp: currentTime,
+    coords: {
+      lat: weatherData.coord.lat,
+      lon: weatherData.coord.lon
+    }
+  };
+  
+  // Remove any existing entry for the same location to avoid duplicates
+  const filteredHistory = cleanHistory.filter(entry => 
+    entry.location !== newEntry.location
+  );
+  
+  // Add new entry at the beginning
+  const newHistory = [newEntry, ...filteredHistory];
+  saveToLocalStorage('weatherHistory', newHistory);
+  
+  // Dispatch custom event to notify components
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('weatherHistoryUpdated'));
+  }
+  
+  return newHistory.length;
+};

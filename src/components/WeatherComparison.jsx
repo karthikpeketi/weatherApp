@@ -59,10 +59,10 @@ const WeatherComparison = ({ currentWeather }) => {
         onClose={() => setShowComparison(false)}
         title="Weather Comparison"
         titleIcon={<BarChart3 className="h-6 w-6" />}
-        maxWidth="max-w-4xl"
+        maxWidth="60%"
       >
         {/* Add Location Search */}
-        <div className="mb-6">
+        <div className="mb-6 mt-1">
           <LocationSuggestions
             placeholder="Search location to compare..."
             onLocationSelect={addLocationForComparison}
@@ -78,8 +78,8 @@ const WeatherComparison = ({ currentWeather }) => {
         {/* Comparison Table */}
         {allLocations.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
+            <table className="w-full hidden sm:table">
+              <thead className=" sm:table-header-group">
                 <tr className="border-b border-white/20">
                   <th className="text-left p-3">Location</th>
                   <th className="text-center p-3">Temperature</th>
@@ -147,8 +147,83 @@ const WeatherComparison = ({ currentWeather }) => {
                 ))}
               </tbody>
             </table>
+
+            <table className="w-full sm:hidden">
+              <tbody>
+                {allLocations.map((location) => (
+                  <tr key={location.id} className={`border-b border-white/10 ${location.isCurrent ? 'bg-white/10' : ''} flex flex-col`}>
+                    <td className="p-3 flex justify-between">
+                      <div className="font-medium">Location</div>
+                      <div>
+                        <div className="font-medium">
+                          {location.name}
+                          {location.isCurrent && (
+                            <span className="ml-2 text-xs bg-blue-500 px-2 py-1 rounded-full">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm opacity-70">{location.country}</div>
+                      </div>
+                    </td>
+                    <td className="p-3 flex justify-between">
+                      <div className="font-medium">Temperature</div>
+                      <div className="text-xl font-bold">
+                        {Math.round(location.weather.main.temp)}°
+                      </div>
+                    </td>
+                    <td className="p-3 flex justify-between">
+                      <div className="font-medium">Feels Like</div>
+                      <div>
+                        {Math.round(location.weather.main.feels_like)}°
+                      </div>
+                    </td>
+                    <td className="p-3 flex justify-between">
+                      <div className="font-medium">Humidity</div>
+                      <div>
+                        {location.weather.main.humidity}%
+                      </div>
+                    </td>
+                    <td className="p-3 flex justify-between">
+                      <div className="font-medium">Wind</div>
+                      <div>
+                        {Math.round(location.weather.wind.speed * 3.6)} km/h
+                      </div>
+                    </td>
+                    <td className="p-3 flex justify-between">
+                      <div className="font-medium">Condition</div>
+                      <div className="flex flex-col items-center">
+                        <img
+                          src={`https://openweathermap.org/img/wn/${location.weather.weather[0].icon}@2x.png`}
+                          alt={location.weather.weather[0].description}
+                          className="w-8 h-8"
+                        />
+                        <div className="text-xs opacity-70">
+                          {location.weather.weather[0].main}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3 flex justify-between">
+                      <div className="font-medium">Action</div>
+                      <div>
+                        {!location.isCurrent && (
+                          <button
+                            onClick={() => removeLocation(location.id)}
+                            className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                            title="Remove from comparison"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
+
 
         {allLocations.length === 0 && (
           <div className="text-center py-12 opacity-70">

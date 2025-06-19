@@ -113,7 +113,7 @@ const FavoriteLocations = ({ currentLocation, onLocationSelect, getModalPosition
         onClose={() => setShowFavorites(false)}
         title="Favorite Locations"
         titleIcon={<MapPin className="h-6 w-6" />}
-        maxWidth="max-w-md"
+        maxWidth="60%"
         maxHeight="80vh"
       >
         {favorites.length === 0 ? (
