@@ -19,11 +19,11 @@ const popupContainerStyles = {
   overflow: 'auto' // Allow scrolling if content is too tall
 };
 
-const popupContentStyles = (maxHeight) => ({
+const popupContentStyles = (maxHeight, maxWidth) => ({
   maxHeight: `calc(${maxHeight} - 2rem)`,
   minHeight: 'fit-content',
-  maxWidth: '100%',
-  width: '100%',
+  minWidth: 'fit-content',
+  maxWidth: `calc(${maxWidth} - 2rem)`,
   display: 'flex',
   flexDirection: 'column',
   margin: 'auto',
@@ -36,7 +36,7 @@ const ReusablePopup = ({
   onClose, 
   title, 
   children, 
-  maxWidth = 'max-w-4xl',
+  maxWidth = '100%',
   maxHeight = '90vh', // Changed to accept direct values for better control
   showCloseButton = true,
   titleIcon = null,
@@ -52,9 +52,6 @@ const ReusablePopup = ({
 
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll when popup is open
-      const originalOverflow = document.body.style.overflow;
-      const originalPosition = document.body.style.position;
       
       document.body.style.overflow = 'hidden';
       document.body.style.position = 'relative';
@@ -84,8 +81,8 @@ const ReusablePopup = ({
       style={popupContainerStyles}
     >
       <div 
-        className={`${maxWidth} w-full bg-white/10 backdrop-blur-md rounded-3xl text-white ${className}`}
-        style={popupContentStyles(maxHeight)}
+        className={`w-full bg-white/10 backdrop-blur-md rounded-3xl text-white ${className}`}
+        style={popupContentStyles(maxHeight, maxWidth)}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
@@ -96,10 +93,10 @@ const ReusablePopup = ({
           {showCloseButton && (
             <button
               onClick={onClose}
-              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+              className="ml-2 p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
               aria-label="Close popup"
             >
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5" />
             </button>
           )}
         </div>

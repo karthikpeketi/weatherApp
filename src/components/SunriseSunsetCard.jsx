@@ -1,5 +1,6 @@
 import { Sunrise, Sunset, Sun } from 'lucide-react';
 import { formatTime } from '../utils/weatherUtils';
+import { Card, CardHeader, CardContent, CardTitle } from './ui';
 
 const SunriseSunsetCard = ({ weather, uvIndex }) => {
   if (!weather || !weather.sys) return null;
@@ -31,76 +32,80 @@ const SunriseSunsetCard = ({ weather, uvIndex }) => {
   const uvLevel = getUVLevel(uvIndex?.value);
 
   return (
-    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 text-white">
-      <div className="flex items-center gap-2 mb-6">
-        <Sun className="h-6 w-6" />
-        <h3 className="text-xl font-semibold">Sun & UV</h3>
-      </div>
+    <Card className="p-6">
+      <CardHeader className="p-0 pb-6">
+        <CardTitle className="flex items-center gap-2">
+          <Sun className="h-6 w-6" />
+          Sun & UV
+        </CardTitle>
+      </CardHeader>
 
-      {/* Sunrise & Sunset */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        <div className="text-center">
-          <Sunrise className="h-8 w-8 mx-auto mb-2 text-orange-400" />
-          <div className="text-sm opacity-70 mb-1">Sunrise</div>
-          <div className="text-lg font-semibold">{sunriseTime}</div>
-        </div>
-        
-        <div className="text-center">
-          <Sunset className="h-8 w-8 mx-auto mb-2 text-orange-600" />
-          <div className="text-sm opacity-70 mb-1">Sunset</div>
-          <div className="text-lg font-semibold">{sunsetTime}</div>
-        </div>
-      </div>
-
-      {/* Day Progress */}
-      <div className="mb-6">
-        <div className="flex justify-between text-sm opacity-70 mb-2">
-          <span>Day Progress</span>
-          <span>{isDaytime ? `${Math.round(dayProgress)}%` : 'Night'}</span>
-        </div>
-        <div className="w-full bg-white/20 rounded-full h-2">
-          <div 
-            className="bg-gradient-to-r from-orange-400 to-yellow-400 h-2 rounded-full transition-all duration-1000"
-            style={{ width: `${dayProgress}%` }}
-          ></div>
-        </div>
-      </div>
-
-      {/* UV Index */}
-      <div className="bg-white/5 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm opacity-70">UV Index</span>
-          <span className={`font-semibold ${uvLevel.color}`}>
-            {uvLevel.level}
-          </span>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <span className="text-2xl font-bold">
-            {uvIndex?.value ? Math.round(uvIndex.value) : 'N/A'}
-          </span>
-          <div className="text-xs opacity-60 text-right">
-            {uvIndex?.value && (
-              <>
-                {uvIndex.value <= 2 && "Minimal protection needed"}
-                {uvIndex.value > 2 && uvIndex.value <= 5 && "Wear sunscreen"}
-                {uvIndex.value > 5 && uvIndex.value <= 7 && "Seek shade, wear protection"}
-                {uvIndex.value > 7 && uvIndex.value <= 10 && "Avoid sun exposure"}
-                {uvIndex.value > 10 && "Extreme caution required"}
-              </>
-            )}
+      <CardContent className="p-0">
+        {/* Sunrise & Sunset */}
+        <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className="text-center">
+            <Sunrise className="h-8 w-8 mx-auto mb-2 text-orange-400" />
+            <div className="text-sm opacity-70 mb-1">Sunrise</div>
+            <div className="text-lg font-semibold">{sunriseTime}</div>
+          </div>
+          
+          <div className="text-center">
+            <Sunset className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+            <div className="text-sm opacity-70 mb-1">Sunset</div>
+            <div className="text-lg font-semibold">{sunsetTime}</div>
           </div>
         </div>
-      </div>
 
-      {/* Day Length */}
-      <div className="mt-4 text-center">
-        <div className="text-sm opacity-70">Day Length</div>
-        <div className="font-semibold">
-          {Math.floor(dayLength / 3600)}h {Math.floor((dayLength % 3600) / 60)}m
+        {/* Day Progress */}
+        <div className="mb-6">
+          <div className="flex justify-between text-sm opacity-70 mb-2">
+            <span>Day Progress</span>
+            <span>{isDaytime ? `${Math.round(dayProgress)}%` : 'Night'}</span>
+          </div>
+          <div className="w-full bg-white/20 rounded-full h-2">
+            <div 
+              className="bg-gradient-to-r from-orange-400 to-yellow-400 h-2 rounded-full transition-all duration-1000"
+              style={{ width: `${dayProgress}%` }}
+            ></div>
+          </div>
         </div>
-      </div>
-    </div>
+
+        {/* UV Index */}
+        <div className="bg-white/5 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm opacity-70">UV Index</span>
+            <span className={`font-semibold ${uvLevel.color}`}>
+              {uvLevel.level}
+            </span>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <span className="text-2xl font-bold">
+              {uvIndex?.value ? Math.round(uvIndex.value) : 'N/A'}
+            </span>
+            <div className="text-xs opacity-60 text-right">
+              {uvIndex?.value && (
+                <>
+                  {uvIndex.value <= 2 && "Minimal protection needed"}
+                  {uvIndex.value > 2 && uvIndex.value <= 5 && "Wear sunscreen"}
+                  {uvIndex.value > 5 && uvIndex.value <= 7 && "Seek shade, wear protection"}
+                  {uvIndex.value > 7 && uvIndex.value <= 10 && "Avoid sun exposure"}
+                  {uvIndex.value > 10 && "Extreme caution required"}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Day Length */}
+        <div className="mt-4 text-center">
+          <div className="text-sm opacity-70">Day Length</div>
+          <div className="font-semibold">
+            {Math.floor(dayLength / 3600)}h {Math.floor((dayLength % 3600) / 60)}m
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
