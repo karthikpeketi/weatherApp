@@ -10,14 +10,11 @@ WeatherApp is a web application that provides current weather information, forec
 - 5-day weather forecast
 - Air quality data
 - UV Index
-- Weather alerts
 - Weather maps
 - Favorite locations
 - Weather history
 - Unit toggle (Celsius/Fahrenheit)
-- Theme toggle (Light/Dark)
 - Voice search
-- Export weather data
 - Weather comparison
 
 ## Technologies Used
@@ -37,10 +34,6 @@ WeatherApp is a web application that provides current weather information, forec
 
 1. Run the application using `npm run dev`
 2. Open the application in your browser at `http://localhost:5173`
-
-## Contributing
-
-[Link to contributing guidelines]
 
 ## License
 
