@@ -210,7 +210,6 @@ function App() {
 			if (uvData.status === 'fulfilled' && uvData.value) {
 				setUVIndex(uvData.value);
 			}
-
 		} catch (err) {
 			setError("Failed to fetch weather data");
 		} finally {
