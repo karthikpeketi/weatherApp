@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Cloud, Thermometer, Wind, Droplets, Sun, Snowflake, Zap, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { getWeather, getForecast, getAirQuality, getUVIndex } from "./api";
-import { celsiusToFahrenheit, getFromLocalStorage, saveToLocalStorage } from "./utils/weatherUtils";
+import { celsiusToFahrenheit, getFromLocalStorage, saveToLocalStorage, addWeatherToHistory, cleanupOldHistoryEntries as cleanupHistoryUtil } from "./utils/weatherUtils";
 import { v4 as uuidv4 } from 'uuid';
 
 // Import new components
@@ -99,72 +99,7 @@ function App() {
 
 	// Cleanup old weather history entries on app load
 	useEffect(() => {
-		const cleanupOldHistoryEntries = () => {
-			const history = getFromLocalStorage('weatherHistory') || [];
-			const currentTime = Date.now();
-			const threeDaysAgo = currentTime - (3 * 24 * 60 * 60 * 1000); // 3 days in milliseconds
-			
-			// Filter out entries older than 3 days
-			const validEntries = history.filter(entry => {
-				// Handle both old entries without timestamp and new entries with timestamp
-				const entryTime = entry.timestamp || entry.id || 0;
-				return entryTime > threeDaysAgo;
-			});
-			
-			// Only update localStorage if we actually removed entries
-			if (validEntries.length !== history.length) {
-				saveToLocalStorage('weatherHistory', validEntries);
-				console.log(`Cleaned up ${history.length - validEntries.length} old weather history entries`);
-			}
-		};
-
-		// Clean up old entries on app load
-		cleanupOldHistoryEntries();
-
-		// Set up the global save function with automatic cleanup
-		window.saveWeatherToHistory = (weatherData) => {
-			const currentTime = Date.now();
-			const threeDaysAgo = currentTime - (3 * 24 * 60 * 60 * 1000);
-			
-			// Get existing history and clean it
-			const existingHistory = getFromLocalStorage('weatherHistory') || [];
-			const cleanHistory = existingHistory.filter(entry => {
-				const entryTime = entry.timestamp || entry.id || 0;
-				return entryTime > threeDaysAgo;
-			});
-			
-			// Create new entry with timestamp
-			const newEntry = {
-				id: uuidv4(),
-				location: `${weatherData.name}, ${weatherData.sys.country}`,
-				country: weatherData.sys.country,
-				weather: weatherData,
-				temperature: weatherData.main.temp,
-				condition: weatherData.weather[0].main,
-				description: weatherData.weather[0].description,
-				timestamp: currentTime,
-				coords: {
-					lat: weatherData.coord.lat,
-					lon: weatherData.coord.lon
-				}
-			};
-			
-			// Remove any existing entry for the same location to avoid duplicates
-			const filteredHistory = cleanHistory.filter(entry => 
-				entry.location !== newEntry.location
-			);
-			
-			// Add new entry at the beginning
-			const newHistory = [newEntry, ...filteredHistory];
-			saveToLocalStorage('weatherHistory', newHistory);
-		};
-
-		// Cleanup function
-		return () => {
-			if (window.saveWeatherToHistory) {
-				delete window.saveWeatherToHistory;
-			}
-		};
+		cleanupHistoryUtil(); // Use the utility function for cleanup
 	}, []);
 
 	useEffect(() => {
@@ -189,10 +124,8 @@ function App() {
 			if (weatherData.status === 'fulfilled' && weatherData.value) {
 				setWeather(weatherData.value);
 				
-				// Save to history
-				if (window.saveWeatherToHistory) {
-					window.saveWeatherToHistory(weatherData.value);
-				}
+				// Save to history using the utility function
+				addWeatherToHistory(weatherData.value);
 			} else {
 				setError("Failed to fetch weather data");
 				return;
