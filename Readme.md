@@ -22,7 +22,6 @@ Experience Weatherwise live: [https://karthikpeketi.github.io/weatherApp](https:
 -   **Weather Comparison**: Compare weather conditions between multiple locations.
 -   **Voice Search**: Search for locations using voice commands.
 -   **Weather History**: Keep track of your past weather searches.
--   **Export Data**: Download current and forecast weather data in JSON format.
 -   **Responsive Design**: Optimized for seamless experience across all devices (desktop, tablet, mobile).
 
 ## Technologies Used
