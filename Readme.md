@@ -1,6 +1,6 @@
 # Weatherwise App
 
-Weatherwise is a modern, responsive weather application built with React, Vite, and Tailwind CSS. It provides real-time weather data, a 5-day/24-hour forecast, air quality information, UV index, and a suite of advanced features to enhance the user's weather tracking experience.
+Weatherwise is a modern, responsive weather application built with React, Vite, and Tailwind CSS. It offers real-time weather data, a 5-day/24-hour forecast, and essential environmental information like air quality and UV index. The app includes advanced features such as dynamic backgrounds, favorite locations, interactive weather maps, voice search, and weather history. Optimized for all devices, Weatherwise provides a comprehensive and intuitive weather tracking experience.
 
 ## Live Demo
 
