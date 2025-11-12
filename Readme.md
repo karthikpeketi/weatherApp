@@ -154,6 +154,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Contact
 
-Karthik Peketi - [Your Email/GitHub Profile]
-
-Project Link: [https://github.com/karthikpeketi/weatherApp](https://github.com/karthikpeketi/weatherApp)
+Karthik Peketi - karthikreddypeketi@gmail.com - https://www.linkedin.com/in/karthik-peketi/
